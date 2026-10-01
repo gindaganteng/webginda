@@ -23,8 +23,8 @@
         <nav class="side-nav" aria-label="Menu admin">
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="fa-solid fa-table-cells-large"></i> Dashboard</a>
             <a href="{{ route('admin.artikel') }}" class="{{ request()->routeIs('admin.artikel*') ? 'active' : '' }}"><i class="fa-regular fa-newspaper"></i> Artikel</a>
-            <a href="#"><i class="fa-solid fa-bag-shopping"></i> Produk</a>
-            <a href="#"><i class="fa-regular fa-images"></i> Galeri</a>
+            <a href="{{ route('admin.produk') }}" class="{{ request()->routeIs('admin.produk*') ? 'active' : '' }}"><i class="fa-solid fa-bag-shopping"></i> Produk</a>
+            <a href="{{ route('admin.galeri') }}" class="{{ request()->routeIs('admin.galeri*') ? 'active' : '' }}"><i class="fa-regular fa-images"></i> Galeri</a>
         </nav>
 
         <div class="side-foot">
@@ -63,7 +63,11 @@
             @yield('content')
         </div>
 
-        <footer class="admin-foot">&copy; {{ date('Y') }} SMKN 4 KOTA BOGOR. All rights reserved.</footer>
+        @hasSection('footer_custom')
+            @yield('footer_custom')
+        @else
+            <footer class="admin-foot">&copy; {{ date('Y') }} SMKN 4 KOTA BOGOR. All rights reserved.</footer>
+        @endif
     </div>
 
 </div>

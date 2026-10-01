@@ -691,3 +691,73 @@ a.pg:hover { background: var(--bg-soft); }
 .info-card strong.gelap { color: #1a1f2b; font-weight: 500; }
 
 @media (max-width: 800px) { .info-row { grid-template-columns: 1fr; } .page-head h1 { font-size: 26px; } }
+
+/* ===== Kelola Produk (admin) ===== */
+.page-head.sm h1 { font-size: 20px; }
+.info-ico.peach { background: #fde5d8; color: #d9622b; }
+.info-card.plain { background: #f7f8fa; }
+.info-card.plain small { font-size: 14px; }
+.info-card.plain strong { font-size: 14px; color: #3d4655; font-weight: 400; }
+
+.produk-panel { background: #f3f4f6; border: 1px solid #e1e4ea; border-radius: 8px; overflow: hidden; margin-top: 24px; min-height: 300px; }
+.panel-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 20px 18px; }
+.panel-top h2 { font-size: 14px; font-weight: 400; color: #1a1f2b; }
+.panel-search { display: flex; align-items: center; gap: 8px; }
+.mini-search { position: relative; width: 190px; }
+.mini-search i { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--muted); }
+.mini-search input { width: 100%; height: 28px; padding: 0 8px 0 28px; border: 1px solid #cfd4dc; border-radius: 2px; background: #fff; font-family: inherit; font-size: 12px; color: var(--text); }
+.btn-ikon { width: 28px; height: 28px; border: 1px solid #cfd4dc; background: #fff; border-radius: 2px; color: #3d4655; cursor: pointer; font-size: 12px; }
+.btn-ikon:hover { background: var(--bg-soft); }
+
+.tabel-produk { width: 100%; border-collapse: collapse; background: #fff; min-width: 560px; }
+.tabel-produk th { background: #eceef2; font-size: 13px; font-weight: 600; padding: 16px; text-align: center; color: #1a1f2b; }
+.tabel-produk td { padding: 12px 16px; text-align: center; font-size: 13px; color: #1a1f2b; border-top: 1px solid #eef0f4; vertical-align: middle; }
+.tabel-produk .t-no { width: 72px; }
+.tabel-produk .t-nama { text-align: left; }
+.tabel-produk .t-aksi { text-align: right; padding-right: 32px; white-space: nowrap; }
+.thumb-produk { width: 56px; height: 48px; border-radius: 2px; object-fit: cover; background: #dfe6f5; margin: 0 auto; }
+.nama-produk { display: block; color: var(--navy); font-weight: 600; font-size: 14px; }
+.nama-produk:hover { text-decoration: underline; }
+.tabel-produk small { font-size: 11px; color: var(--muted); }
+.tabel-produk .t-aksi a, .tabel-produk .t-aksi button { background: none; border: 0; cursor: pointer; font-size: 15px; margin-left: 16px; padding: 4px; }
+.tabel-produk .edit { color: #9a7400; }
+.tabel-produk .hapus { color: #d32f2f; }
+.tabel-produk .t-aksi a:hover, .tabel-produk .t-aksi button:hover { opacity: .7; }
+.tabel-produk td.kosong { padding: 40px; color: var(--muted); }
+
+.admin-foot.split { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; text-align: left; font-size: 13px; color: #3d4655; }
+.admin-foot.split nav { display: flex; gap: 24px; }
+.admin-foot.split a:hover { text-decoration: underline; }
+
+/* ===== Kelola Galeri (admin) ===== */
+.crumb { display: flex; gap: 8px; font-size: 13px; color: #3d4655; margin-top: 4px; }
+.crumb strong { color: var(--navy); font-weight: 600; }
+.mini-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.mini-card { display: flex; align-items: center; gap: 16px; min-width: 168px; padding: 16px; background: #f1f2f6; border: 1px solid #e1e4ea; border-radius: 6px; }
+.mini-card small { display: block; font-size: 12px; color: #3d4655; }
+.mini-card strong { font-size: 22px; font-weight: 500; color: #1a1f2b; line-height: 1.2; }
+
+.galeri-panel { background: #fff; border: 1px solid #e1e4ea; border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+.galeri-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 24px 20px; }
+.galeri-top h2 { font-family: "Manrope", var(--font); font-size: 22px; font-weight: 500; color: #1a1f2b; }
+.search-pill { position: relative; width: 260px; }
+.search-pill i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #3d4655; }
+.search-pill input { width: 100%; height: 40px; padding: 0 12px 0 38px; border: 1px solid #d5dbe6; border-radius: 8px; background: #f3f4f6; font-family: inherit; font-size: 13px; color: var(--text); }
+
+.tabel-galeri { width: 100%; border-collapse: collapse; min-width: 600px; }
+.tabel-galeri th { background: #f1f2f5; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 16px 20px; color: #2b3340; }
+.tabel-galeri td { padding: 12px 20px; border-top: 1px solid #eef0f4; font-size: 14px; color: #3d4655; vertical-align: middle; }
+.tabel-galeri .g-no { width: 68px; }
+.tabel-galeri .g-aksi { text-align: center; white-space: nowrap; }
+.thumb-galeri { width: 60px; height: 36px; border-radius: 2px; object-fit: cover; background: #dfe6f5; }
+.judul-galeri { color: var(--navy); font-weight: 600; }
+.judul-galeri:hover { text-decoration: underline; }
+.tabel-galeri .g-aksi a, .tabel-galeri .g-aksi button { background: none; border: 0; cursor: pointer; font-size: 15px; margin: 0 8px; padding: 4px; }
+.tabel-galeri .edit { color: #9a7400; }
+.tabel-galeri .hapus { color: #d32f2f; }
+.tabel-galeri .g-aksi a:hover, .tabel-galeri .g-aksi button:hover { opacity: .7; }
+.tabel-galeri td.kosong { text-align: center; padding: 40px; color: var(--muted); }
+
+.pager.boxed .pg { border: 1px solid #d5dbe6; background: #fff; border-radius: 4px; }
+.pager.boxed .pg.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+.pager.boxed .pg.off { opacity: .4; }
