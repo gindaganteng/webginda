@@ -32,6 +32,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('auth')->prefix('admin')->group(function () {
     Route::view('/dashboard', 'admin.dashboard')->name('admin.dashboard');
     Route::get('/artikel', [AdminArtikelController::class, 'index'])->name('admin.artikel');
+    Route::get('/artikel/tambah', [AdminArtikelController::class, 'create'])->name('admin.artikel.tambah');
+    Route::post('/artikel', [AdminArtikelController::class, 'store'])->name('admin.artikel.simpan');
     Route::get('/produk', [AdminProdukController::class, 'index'])->name('admin.produk');
     Route::get('/galeri', [AdminGaleriController::class, 'index'])->name('admin.galeri');
 });
+
