@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Dashboard') - Admin SMKN 4 Kota Bogor</title>
+    <title>@yield('title', 'Dashboard') - Admin Solusi Koneksi Anda</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
@@ -17,14 +17,15 @@
     <aside class="sidebar">
         <div class="side-head">
             <strong>Admin Panel</strong>
-            <span>SMKN 4 BOGOR</span>
+            <span>Solusi Koneksi Anda</span>
         </div>
 
         <nav class="side-nav" aria-label="Menu admin">
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="fa-solid fa-table-cells-large"></i> Dashboard</a>
-            <a href="{{ route('admin.artikel') }}" class="{{ request()->routeIs('admin.artikel*') ? 'active' : '' }}"><i class="fa-regular fa-newspaper"></i> Artikel</a>
-            <a href="{{ route('admin.produk') }}" class="{{ request()->routeIs('admin.produk*') ? 'active' : '' }}"><i class="fa-solid fa-bag-shopping"></i> Produk</a>
-            <a href="{{ route('admin.galeri') }}" class="{{ request()->routeIs('admin.galeri*') ? 'active' : '' }}"><i class="fa-regular fa-images"></i> Galeri</a>
+<a href="{{ route('admin.profil') }}" class="{{ request()->routeIs('admin.profil*') ? 'active' : '' }}"><i class="fa-regular fa-building"></i> Profil</a>
+<a href="{{ route('admin.produk') }}" class="{{ request()->routeIs('admin.produk*') ? 'active' : '' }}"><i class="fa-solid fa-bag-shopping"></i> Produk / Layanan</a>
+<a href="{{ route('admin.artikel') }}" class="{{ request()->routeIs('admin.artikel*') ? 'active' : '' }}"><i class="fa-regular fa-newspaper"></i> Artikel</a>
+<a href="{{ route('admin.galeri') }}" class="{{ request()->routeIs('admin.galeri*') ? 'active' : '' }}"><i class="fa-regular fa-images"></i> Galeri</a>
         </nav>
 
         <div class="side-foot">
@@ -66,7 +67,7 @@
         @hasSection('footer_custom')
             @yield('footer_custom')
         @else
-            <footer class="admin-foot">&copy; {{ date('Y') }} SMKN 4 KOTA BOGOR. All rights reserved.</footer>
+                    <footer class="admin-foot">&copy; {{ date('Y') }} {{ $profil->nama_perusahaan }}. All rights reserved.</footer>
         @endif
     </div>
 

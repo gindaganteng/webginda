@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
-@section('title', 'Kontak')
+@section('title', 'Kontak Kami')
 
 @section('content')
 
 <section class="page-hero left below sm">
     <div class="container">
-        <h1>Kontak</h1>
+        <h1>Kontak Kami</h1>
         <nav class="breadcrumb" aria-label="Breadcrumb">
             <a href="{{ route('home') }}">Home</a>
             <i class="fa-solid fa-angle-right"></i>
-            <span>Kontak</span>
+            <span>Kontak Kami</span>
         </nav>
     </div>
 </section>
@@ -21,8 +21,8 @@
         {{-- PETA --}}
         <div class="peta">
             <iframe
-                src="https://www.google.com/maps?q=SMK+Negeri+4+Bogor&output=embed"
-                title="Lokasi SMK Negeri 4 Bogor" loading="lazy" allowfullscreen
+                src="https://www.google.com/maps?q={{ urlencode($profil->alamat) }}&output=embed"
+                title="Lokasi {{ $profil->nama_perusahaan }}" loading="lazy" allowfullscreen
                 referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
 
@@ -30,25 +30,25 @@
         <div class="kontak-grid">
             <div class="kontak-info">
                 <h2>Hubungi Kami</h2>
-                <p>Kami selalu siap membantu dan mendengarkan aspirasi Anda. Silakan hubungi kami melalui kanal informasi di bawah ini atau kunjungi sekolah kami secara langsung.</p>
+                <p>Kami siap membantu kebutuhan teknologi dan jaringan Anda. Silakan hubungi kami melalui kanal di bawah ini atau kunjungi kantor kami secara langsung.</p>
 
                 <div class="info-item">
                     <div class="info-icon"><i class="fa-solid fa-location-dot"></i></div>
-                    <div><h3>Alamat</h3><p>Jl. Raya Tajur Kp. Buntar, Muarasari, Bogor Selatan, Kota Bogor</p></div>
+                    <div><h3>Alamat</h3><p>{{ $profil->alamat }}</p></div>
                 </div>
                 <div class="info-item">
                     <div class="info-icon"><i class="fa-solid fa-phone"></i></div>
-                    <div><h3>Telepon</h3><p>+62 821 226 2442</p></div>
+                    <div><h3>Telepon</h3><p>{{ $profil->telepon }}</p></div>
                 </div>
                 <div class="info-item">
                     <div class="info-icon"><i class="fa-regular fa-envelope"></i></div>
-                    <div><h3>Email</h3><p>info@smkn4bogor.sch.id</p></div>
+                    <div><h3>Email</h3><p>{{ $profil->email }}</p></div>
                 </div>
                 <div class="info-item">
                     <div class="info-icon"><i class="fa-regular fa-clock"></i></div>
                     <div>
                         <h3>Jam Operasional</h3>
-                        <p>Senin - Jumat: 07.00 - 16.00 WIB<br>Sabtu: 07.00 - 13.00 WIB<br>Minggu: Tutup</p>
+                        <p>{{ $profil->jam_kerja }}</p>
                     </div>
                 </div>
             </div>
@@ -84,10 +84,11 @@
 
         {{-- BANNER --}}
         <section class="banner-kolab">
-            <img src="{{ asset('images/gedung-sekolah.jpg') }}" alt="Gedung SMK Negeri 4 Bogor">
+            <img src="{{ asset('images/about.jpg') }}" alt="Kantor {{ $profil->nama_perusahaan }}"
+                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder.svg') }}'">
             <div class="banner-teks">
                 <h2>Mari Berkolaborasi</h2>
-                <p>Kami menyambut baik setiap kolaborasi dari orang tua, alumni, dan institusi pendidikan untuk memajukan generasi masa depan.</p>
+                <p>Kami menyambut baik kerja sama dengan mitra, klien, dan institusi untuk menghadirkan solusi teknologi yang andal.</p>
             </div>
         </section>
 

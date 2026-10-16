@@ -2,50 +2,100 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Artikel;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class AdminArtikelController extends Controller
 {
+    private const KATEGORI = ['Tips', 'Pengumuman', 'Informasi'];
+
+    private function aturan(): array
+    {
+        return [
+            'judul'     => ['required', 'string', 'max:150'],
+            'kategori'  => ['required', 'in:' . implode(',', self::KATEGORI)],
+            'tanggal'   => ['required', 'date'],
+            'deskripsi' => ['required', 'string'],
+            'gambar'    => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
+        ];
+    }
+
+    private function pesan(): array
+    {
+        return [
+            'judul.required'     => 'Judul artikel wajib diisi.',
+            'kategori.required'  => 'Pilih kategori artikel.',
+            'tanggal.required'   => 'Tanggal publikasi wajib diisi.',
+            'deskripsi.required' => 'Isi artikel wajib diisi.',
+            'gambar.image'       => 'File harus berupa gambar.',
+            'gambar.mimes'       => 'Gambar harus berformat PNG atau JPG.',
+            'gambar.max'         => 'Ukuran gambar maksimal 5MB.',
+        ];
+    }
+
     public function index(Request $request)
     {
-        $semua = collect([
-            ['judul' => 'Kegiatan MPLS Tahun 2026', 'kategori' => 'Kegiatan Sekolah', 'tanggal' => '2026-05-20', 'gambar' => 'artikel-1.jpg'],
-            ['judul' => 'Siswa Berprestasi', 'kategori' => 'Prestasi', 'tanggal' => '2025-05-18', 'gambar' => 'artikel-2.jpg'],
-            ['judul' => 'Kunjungan Industri ke Yogyakarta', 'kategori' => 'Kegiatan Sekolah', 'tanggal' => '2024-07-30', 'gambar' => 'artikel-1.jpg'],
-            ['judul' => 'Kelulusan Tahun 2024', 'kategori' => 'Pengumuman', 'tanggal' => '2025-05-10', 'gambar' => 'artikel-3.jpg'],
-            ['judul' => 'Juara Lomba LKS Tingkat Kota', 'kategori' => 'Prestasi', 'tanggal' => '2025-04-22', 'gambar' => 'artikel-2.jpg'],
-            ['judul' => 'Pengumuman Libur Semester Genap', 'kategori' => 'Pengumuman', 'tanggal' => '2025-04-10', 'gambar' => 'artikel-3.jpg'],
-            ['judul' => 'Workshop Kewirausahaan Siswa', 'kategori' => 'Kegiatan Sekolah', 'tanggal' => '2025-03-15', 'gambar' => 'artikel-1.jpg'],
-            ['judul' => 'Bakti Sosial OSIS', 'kategori' => 'Kegiatan Sekolah', 'tanggal' => '2025-02-27', 'gambar' => 'artikel-1.jpg'],
-            ['judul' => 'Peringatan Hari Guru Nasional', 'kategori' => 'Kegiatan Sekolah', 'tanggal' => '2024-11-25', 'gambar' => 'artikel-2.jpg'],
-            ['judul' => 'Jadwal Penerimaan Peserta Didik Baru', 'kategori' => 'Pengumuman', 'tanggal' => '2024-06-05', 'gambar' => 'artikel-3.jpg'],
-        ])->map(fn ($a) => (object) $a);
-
         $cari = trim((string) $request->query('q'));
         $kategori = $request->query('kategori');
 
-        $terfilter = $semua
-            ->when($cari, fn ($c) => $c->filter(fn ($a) => str_contains(strtolower($a->judul), strtolower($cari))))
-            ->when($kategori, fn ($c) => $c->where('kategori', $kategori))
-            ->values();
-
-        $perHalaman = 5;
-        $halaman = LengthAwarePaginator::resolveCurrentPage();
-
-        $artikels = new LengthAwarePaginator(
-            $terfilter->forPage($halaman, $perHalaman)->values(),
-            $terfilter->count(),
-            $perHalaman,
-            $halaman,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $artikels = Artikel::query()
+            ->when($cari, fn ($q) => $q->where('judul', 'like', "%{$cari}%"))
+            ->when($kategori, fn ($q) => $q->where('kategori', $kategori))
+            ->orderByDesc('tanggal')
+            ->paginate(5)
+            ->withQueryString();
 
         return view('admin.artikel.index', [
             'artikels' => $artikels,
-            'kategoriList' => ['Kegiatan Sekolah', 'Prestasi', 'Pengumuman'],
+            'kategoriList' => self::KATEGORI,
             'cari' => $cari,
             'kategori' => $kategori,
+            'terbaru' => Artikel::orderByDesc('tanggal')->first(),
+            'total' => Artikel::count(),
         ]);
+    }
+
+    public function create()
+    {
+        return view('admin.artikel.form', ['artikel' => null, 'kategoriList' => self::KATEGORI]);
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate($this->aturan(), $this->pesan());
+        $data['gambar'] = $this->simpanGambar($request, 'artikel');
+
+        Artikel::create($data);
+
+        return redirect()->route('admin.artikel')->with('sukses', 'Artikel berhasil diterbitkan.');
+    }
+
+    public function edit(Artikel $artikel)
+    {
+        return view('admin.artikel.form', ['artikel' => $artikel, 'kategoriList' => self::KATEGORI]);
+    }
+
+    public function update(Request $request, Artikel $artikel)
+    {
+        $data = $request->validate($this->aturan(), $this->pesan());
+
+        if ($request->hasFile('gambar')) {
+            $this->hapusGambar($artikel->gambar);
+            $data['gambar'] = $this->simpanGambar($request, 'artikel');
+        } else {
+            unset($data['gambar']);
+        }
+
+        $artikel->update($data);
+
+        return redirect()->route('admin.artikel')->with('sukses', 'Artikel berhasil diperbarui.');
+    }
+
+    public function destroy(Artikel $artikel)
+    {
+        $this->hapusGambar($artikel->gambar);
+        $artikel->delete();
+
+        return redirect()->route('admin.artikel')->with('sukses', 'Artikel berhasil dihapus.');
     }
 }

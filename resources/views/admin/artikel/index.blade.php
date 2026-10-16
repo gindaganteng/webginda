@@ -6,13 +6,17 @@
 <header class="page-head">
     <div>
         <h1>Manajemen Artikel</h1>
-        <p>Kelola publikasi berita dan pengumuman sekolah</p>
+        <p>Kelola artikel dan informasi terkini perusahaan</p>
     </div>
-    <a href="#" class="btn-tambah"><i class="fa-solid fa-plus"></i> Tambah Artikel</a>
+    <a href="{{ route('admin.artikel.tambah') }}" class="btn-tambah"><i class="fa-solid fa-plus"></i> Tambah Artikel</a>
 </header>
 @endsection
 
 @section('content')
+
+@if (session('sukses'))
+    <div class="alert-sukses" role="status">{{ session('sukses') }}</div>
+@endif
 
 <form method="GET" action="{{ route('admin.artikel') }}" class="filter-bar">
     <div class="filter-search">
@@ -48,15 +52,19 @@
                         <td>{{ $artikels->firstItem() + $i }}</td>
                         <td>
                             <div class="judul-cell">
-                                <img src="{{ asset('images/' . $a->gambar) }}" alt="">
-                                <a href="#">{{ $a->judul }}</a>
+                                <img src="{{ $a->gambar_url }}" alt="">
+                                <a href="{{ route('admin.artikel.edit', $a) }}">{{ $a->judul }}</a>
                             </div>
                         </td>
                         <td><span class="badge-kat {{ Str::slug($a->kategori) }}">{{ $a->kategori }}</span></td>
-                        <td>{{ \Carbon\Carbon::parse($a->tanggal)->locale('id')->translatedFormat('d F Y') }}</td>
+                        <td>{{ $a->tanggal->locale('id')->translatedFormat('d F Y') }}</td>
                         <td class="aksi">
-                            <a href="#" class="edit" aria-label="Edit {{ $a->judul }}"><i class="fa-solid fa-pen"></i></a>
-                            <button type="button" class="hapus" aria-label="Hapus {{ $a->judul }}"><i class="fa-regular fa-trash-can"></i></button>
+                            <a href="{{ route('admin.artikel.edit', $a) }}" class="edit" aria-label="Edit {{ $a->judul }}"><i class="fa-solid fa-pen"></i></a>
+                            <form method="POST" action="{{ route('admin.artikel.hapus', $a) }}" onsubmit="return confirm('Hapus artikel ini?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="hapus" aria-label="Hapus {{ $a->judul }}"><i class="fa-regular fa-trash-can"></i></button>
+                            </form>
                         </td>
                     </tr>
                 @empty
@@ -91,16 +99,12 @@
 
 <div class="info-row">
     <div class="info-card">
-        <span class="info-ico biru"><i class="fa-regular fa-eye"></i></span>
-        <div><small>Total View Artikel</small><strong>23,482</strong></div>
+        <span class="info-ico biru"><i class="fa-regular fa-newspaper"></i></span>
+        <div><small>Total Artikel</small><strong>{{ $total }}</strong></div>
     </div>
     <div class="info-card">
         <span class="info-ico kuning"><i class="fa-regular fa-star"></i></span>
-        <div><small>Artikel Populer</small><strong>Kegiatan MPLS 2026</strong></div>
-    </div>
-    <div class="info-card">
-        <span class="info-ico abu"><i class="fa-solid fa-clock-rotate-left"></i></span>
-        <div><small>Terakhir Update</small><strong class="gelap">Hari ini, 09:45 WIB</strong></div>
+        <div><small>Artikel Terbaru</small><strong>{{ $terbaru->judul ?? '-' }}</strong></div>
     </div>
 </div>
 

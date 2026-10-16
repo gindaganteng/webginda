@@ -1,0 +1,1039 @@
+
+===== C:\xamppp\htdocs\webginda\app\Http\Controllers\PublikController.php =====
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Artikel;
+use App\Models\Galeri;
+use App\Models\Produk;
+use App\Models\Profil;
+use Illuminate\Http\Request;
+
+class PublikController extends Controller
+{
+    private function profil(): Profil
+    {
+        return Profil::first() ?? new Profil([
+            'nama_perusahaan' => 'PT Solusi Koneksi Anda',
+            'tentang' => '', 'sejarah' => '', 'visi' => '', 'misi' => '',
+            'alamat' => '-', 'telepon' => '-', 'email' => '-', 'jam_kerja' => '-',
+        ]);
+    }
+
+    public function home()
+    {
+        return view('welcome', [
+            'profil'  => $this->profil(),
+            'produks' => Produk::latest()->take(3)->get(),
+            'artikels' => Artikel::orderByDesc('tanggal')->take(3)->get(),
+            'jmlProduk'  => Produk::count(),
+            'jmlArtikel' => Artikel::count(),
+            'jmlGaleri'  => Galeri::count(),
+        ]);
+    }
+
+    public function profilPage()
+    {
+        return view('profil', ['profil' => $this->profil()]);
+    }
+
+    public function produk(Request $request)
+    {
+        $kategoriAktif = $request->query('kategori');
+        $cari = trim((string) $request->query('q'));
+
+        $daftar = Produk::query()
+            ->when($kategoriAktif, fn ($q) => $q->where('kategori', $kategoriAktif))
+            ->when($cari, fn ($q) => $q->where('nama', 'like', "%{$cari}%"))
+            ->latest()
+            ->get();
+
+        return view('produk', [
+            'daftar' => $daftar,
+            'kategoriList' => Produk::select('kategori')->distinct()->orderBy('kategori')->pluck('kategori'),
+            'kategoriAktif' => $kategoriAktif,
+            'cari' => $cari,
+        ]);
+    }
+
+    public function artikel(Request $request)
+    {
+        $kategoriAktif = $request->query('kategori');
+        $cari = trim((string) $request->query('q'));
+
+        $daftar = Artikel::query()
+            ->when($kategoriAktif, fn ($q) => $q->where('kategori', $kategoriAktif))
+            ->when($cari, fn ($q) => $q->where(function ($w) use ($cari) {
+                $w->where('judul', 'like', "%{$cari}%")
+                  ->orWhere('deskripsi', 'like', "%{$cari}%");
+            }))
+            ->orderByDesc('tanggal')
+            ->get();
+
+        return view('artikel', [
+            'daftar' => $daftar,
+            'kategoriList' => Artikel::select('kategori')->distinct()->orderBy('kategori')->pluck('kategori'),
+            'kategoriAktif' => $kategoriAktif,
+            'cari' => $cari,
+        ]);
+    }
+
+    public function galeri()
+    {
+        return view('galeri', ['foto' => Galeri::orderByDesc('tanggal')->get()]);
+    }
+
+    public function kontak()
+    {
+        return view('kontak', ['profil' => $this->profil()]);
+    }
+}
+
+===== C:\xamppp\htdocs\webginda\routes\web.php =====
+
+<?php
+
+use App\Http\Controllers\AdminArtikelController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminGaleriController;
+use App\Http\Controllers\AdminProdukController;
+use App\Http\Controllers\AdminProfilController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PublikController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', [PublikController::class, 'home'])->name('home');
+Route::get('/profil', [PublikController::class, 'profilPage'])->name('profil');
+Route::get('/produk', [PublikController::class, 'produk'])->name('produk');
+Route::get('/artikel', [PublikController::class, 'artikel'])->name('artikel');
+Route::get('/galeri', [PublikController::class, 'galeri'])->name('galeri');
+Route::get('/kontak', [PublikController::class, 'kontak'])->name('kontak');
+
+Route::post('/kontak', function (Request $request) {
+    $request->validate([
+        'nama'  => 'required|string|max:100',
+        'email' => 'required|email|max:150',
+        'pesan' => 'required|string|max:2000',
+    ]);
+
+    return redirect(route('kontak') . '#kirim-pesan')
+        ->with('sukses', 'Terima kasih, pesan Anda sudah terkirim.');
+})->name('kontak.kirim');
+
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.proses');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::middleware('auth')->prefix('admin')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+
+    // Profil: hanya edit & update (statis, tidak bisa ditambah/dihapus)
+    Route::get('/profil', [AdminProfilController::class, 'edit'])->name('admin.profil');
+    Route::put('/profil', [AdminProfilController::class, 'update'])->name('admin.profil.update');
+
+    // Dinamis: tambah, edit, hapus
+    $modul = [
+        'produk'  => AdminProdukController::class,
+        'artikel' => AdminArtikelController::class,
+        'galeri'  => AdminGaleriController::class,
+    ];
+
+    foreach ($modul as $nama => $controller) {
+        Route::resource($nama, $controller)
+            ->except('show')
+            ->parameters([$nama => $nama])
+            ->names([
+                'index'   => "admin.$nama",
+                'create'  => "admin.$nama.tambah",
+                'store'   => "admin.$nama.simpan",
+                'edit'    => "admin.$nama.edit",
+                'update'  => "admin.$nama.update",
+                'destroy' => "admin.$nama.hapus",
+            ]);
+    }
+});
+
+===== C:\xamppp\htdocs\webginda\app\Models\Artikel.php =====
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Artikel extends Model
+{
+    protected $fillable = ['judul', 'kategori', 'tanggal', 'deskripsi', 'gambar'];
+
+    protected $casts = ['tanggal' => 'date'];
+    public function getGambarUrlAttribute(): string
+    {
+        return $this->gambar
+            ? asset('uploads/' . $this->gambar)
+            : asset('images/placeholder.svg');
+    }
+}
+
+===== C:\xamppp\htdocs\webginda\app\Models\Galeri.php =====
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Galeri extends Model
+{
+    protected $fillable = ['judul', 'tanggal', 'gambar'];
+
+    protected $casts = ['tanggal' => 'date'];
+
+     public function getGambarUrlAttribute(): string
+    {
+        return $this->gambar
+            ? asset('uploads/' . $this->gambar)
+            : asset('images/placeholder.svg');
+    }
+}
+
+===== C:\xamppp\htdocs\webginda\app\Models\Produk.php =====
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Produk extends Model
+{
+    protected $fillable = ['nama', 'kategori', 'deskripsi', 'harga', 'gambar'];
+
+       public function getGambarUrlAttribute(): string
+    {
+        return $this->gambar
+            ? asset('uploads/' . $this->gambar)
+            : asset('images/placeholder.svg');
+    }
+}
+
+===== C:\xamppp\htdocs\webginda\app\Models\Profil.php =====
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Profil extends Model
+{
+    protected $fillable = [
+        'nama_perusahaan', 'tentang', 'sejarah', 'visi', 'misi',
+        'alamat', 'telepon', 'email', 'jam_kerja',
+    ];
+}
+
+===== C:\xamppp\htdocs\webginda\app\Models\User.php =====
+
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+#[Fillable(['name', 'email', 'password'])]
+#[Hidden(['password', 'remember_token'])]
+class User extends Authenticatable
+{
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, Notifiable;
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+}
+
+===== C:\xamppp\htdocs\webginda\database\migrations\2026_10_16_023920_create_produks_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('produks', function (Blueprint $table) {
+            $table->id();
+            $table->string('nama', 150);
+            $table->string('kategori', 100);
+            $table->text('deskripsi')->nullable();
+            $table->unsignedBigInteger('harga')->nullable();
+            $table->string('gambar')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('produks');
+    }
+};
+
+===== C:\xamppp\htdocs\webginda\database\migrations\2026_10_16_023928_create_artikels_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('artikels', function (Blueprint $table) {
+            $table->id();
+            $table->string('judul', 150);
+            $table->string('kategori', 100);
+            $table->date('tanggal');
+            $table->text('deskripsi');
+            $table->string('gambar')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('artikels');
+    }
+};
+
+===== C:\xamppp\htdocs\webginda\database\migrations\2026_10_16_024014_create_galeris_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('galeris', function (Blueprint $table) {
+            $table->id();
+            $table->string('judul', 150);
+            $table->date('tanggal');
+            $table->string('gambar')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('galeris');
+    }
+};
+
+===== C:\xamppp\htdocs\webginda\database\migrations\2026_10_16_024019_create_profils_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('profils', function (Blueprint $table) {
+            $table->id();
+            $table->string('nama_perusahaan', 150);
+            $table->text('tentang');
+            $table->text('sejarah');
+            $table->text('visi');
+            $table->text('misi');
+            $table->string('alamat');
+            $table->string('telepon', 30);
+            $table->string('email', 100);
+            $table->string('jam_kerja')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('profils');
+    }
+};
+
+===== C:\xamppp\htdocs\webginda\resources\views\layouts\app.blade.php =====
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@yield('title', 'Home') - {{ $profil->nama_perusahaan }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    @stack('styles')
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="container nav">
+            <a href="{{ route('home') }}" class="brand">{{ strtoupper($profil->nama_perusahaan) }}</a>
+            <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Buka menu">
+            <nav class="nav-menu" aria-label="Menu utama">
+                <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
+                <a href="{{ route('profil') }}" class="{{ request()->routeIs('profil') ? 'active' : '' }}">Profil Perusahaan</a>
+                <a href="{{ route('produk') }}" class="{{ request()->routeIs('produk') ? 'active' : '' }}">Produk / Layanan</a>
+                <a href="{{ route('artikel') }}" class="{{ request()->routeIs('artikel') ? 'active' : '' }}">Artikel</a>
+                <a href="{{ route('galeri') }}" class="{{ request()->routeIs('galeri') ? 'active' : '' }}">Galeri</a>
+                <a href="{{ route('kontak') }}" class="{{ request()->routeIs('kontak') ? 'active' : '' }}">Kontak Kami</a>
+            </nav>
+            <a href="{{ url('/login') }}" class="btn btn-primary">Login Admin</a>
+            <label for="nav-toggle" class="nav-burger">&#9776;</label>
+        </div>
+    </header>
+
+    <main>
+        @yield('content')
+    </main>
+
+    <footer class="site-footer">
+        <div class="container foot-grid">
+            <div>
+                <a href="{{ route('home') }}" class="foot-brand">{{ strtoupper($profil->nama_perusahaan) }}</a>
+                <p>Penyedia solusi teknologi informasi dan jaringan yang andal untuk instansi, sekolah, dan bisnis.</p>
+                <div class="socials">
+                    <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+                    <a href="#" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+                </div>
+            </div>
+            <div>
+                <h4 class="foot-title yellow">Navigasi</h4>
+                <ul class="foot-links">
+                    <li><a href="{{ route('home') }}">Home</a></li>
+                    <li><a href="{{ route('profil') }}">Profil Perusahaan</a></li>
+                    <li><a href="{{ route('produk') }}">Produk / Layanan</a></li>
+                    <li><a href="{{ route('artikel') }}">Artikel</a></li>
+                    <li><a href="{{ route('galeri') }}">Galeri</a></li>
+                    <li><a href="{{ route('kontak') }}">Kontak Kami</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="foot-title yellow">Informasi</h4>
+                <ul class="foot-contact">
+                    <li><i class="fa-solid fa-location-dot"></i><span>{{ $profil->alamat }}</span></li>
+                    <li><i class="fa-solid fa-phone"></i><span>{{ $profil->telepon }}</span></li>
+                    <li><i class="fa-regular fa-envelope"></i><span>{{ $profil->email }}</span></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="foot-title yellow">Jam Operasional</h4>
+                <ul class="jam">
+                    <li><span>{{ $profil->jam_kerja }}</span></li>
+                </ul>
+            </div>
+        </div>
+        <div class="foot-bottom">&copy; {{ date('Y') }} {{ $profil->nama_perusahaan }}. Semua Hak Dilindungi.</div>
+    </footer>
+
+    @stack('scripts')
+</body>
+</html>
+
+===== C:\xamppp\htdocs\webginda\resources\views\artikel.blade.php =====
+
+@extends('layouts.app')
+
+@section('title', 'Artikel Sekolah')
+
+@section('content')
+
+@php
+    $kategoriAktif = request('kategori');
+    $cari = trim((string) request('q'));
+
+    // Data contoh. Nanti ganti dengan data dari database (model Artikel).
+    $daftar = collect([
+        ['kategori' => 'Kegiatan Sekolah', 'tanggal' => '2 JULI 2026',  'judul' => 'Kegiatan MPLS Tahun 2026',
+         'ringkas' => 'Masa Pengenalan Lingkungan Sekolah (MPLS) tahun ini berjalan dengan lancar dan penuh semangat....', 'gambar' => 'artikel-1.jpg'],
+        ['kategori' => 'Prestasi',         'tanggal' => '18 Mei 2025',  'judul' => 'Siswa Berprestasi di Pramuka',
+         'ringkas' => 'Prestasi membanggakan kembali diukir oleh siswa SMKN 4 KOTA BOGOR tim sekolah berhasil membawa pulang tiga medali emas sekaligus, membuktikan kualitas...', 'gambar' => 'artikel-2.jpg'],
+        ['kategori' => 'Pengumuman',       'tanggal' => '10 Mei 2025',  'judul' => 'Kelulusan Tahun 2025',
+         'ringkas' => 'Selamat kepada seluruh siswa kelas 12 SMKN 4 KOTA BOGOR atas kelulusan 100% tahun ini.', 'gambar' => 'artikel-3.jpg'],
+    ])->map(fn ($a) => (object) $a)
+      ->when($kategoriAktif, fn ($c) => $c->where('kategori', $kategoriAktif))
+      ->when($cari, fn ($c) => $c->filter(fn ($a) => str_contains(strtolower($a->judul . ' ' . $a->ringkas), strtolower($cari))));
+@endphp
+
+<section class="page-hero left">
+    <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ route('home') }}">Home</a>
+            <i class="fa-solid fa-angle-right"></i>
+            <span>Artikel</span>
+        </nav>
+        <h1>Artikel Sekolah</h1>
+        <p class="page-hero-sub">Ikuti perkembangan terbaru, prestasi siswa, dan berbagai kegiatan edukatif yang berlangsung di lingkungan SMKN 4 KOTA BOGOR</p>
+    </div>
+</section>
+
+<div class="page-bg">
+    <div class="container artikel-layout">
+
+        {{-- SIDEBAR --}}
+        <aside>
+            <div class="side-card">
+                <label for="cari" class="side-label">Cari Artikel</label>
+                <form method="GET" action="{{ route('artikel') }}" class="search-box">
+                    @if ($kategoriAktif)<input type="hidden" name="kategori" value="{{ $kategoriAktif }}">@endif
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" id="cari" name="q" value="{{ $cari }}" placeholder="Masukkan kata kunci...">
+                </form>
+            </div>
+
+            <div class="side-card">
+                <h3 class="side-title">Kategori</h3>
+                <ul class="kategori-list">
+                    <li><a href="{{ route('artikel') }}" class="{{ !$kategoriAktif ? 'active' : '' }}">Semua</a></li>
+                    @foreach (['Kegiatan Sekolah', 'Prestasi', 'Pengumuman'] as $k)
+                        <li><a href="{{ route('artikel', ['kategori' => $k]) }}" class="{{ $kategoriAktif === $k ? 'active' : '' }}">{{ $k }}</a></li>
+                    @endforeach
+                </ul>
+            </div>
+        </aside>
+
+        {{-- DAFTAR ARTIKEL --}}
+        <div class="artikel-list">
+            @forelse ($daftar as $a)
+                <article class="artikel-item">
+                    <img src="{{ asset('images/' . $a->gambar) }}" alt="{{ $a->judul }}">
+                    <div class="artikel-content">
+                        <div class="artikel-meta">
+                            <span class="pill">{{ $a->kategori }}</span>
+                            <span class="tgl"><i class="fa-regular fa-calendar"></i> {{ $a->tanggal }}</span>
+                        </div>
+                        <h2>{{ $a->judul }}</h2>
+                        <p>{{ $a->ringkas }}</p>
+                        <a href="#" class="read-lg">Baca Selengkapnya <i class="fa-solid fa-arrow-right"></i></a>
+                    </div>
+                </article>
+            @empty
+                <div class="artikel-kosong">Artikel tidak ditemukan.</div>
+            @endforelse
+        </div>
+
+    </div>
+</div>
+
+@endsection
+
+===== C:\xamppp\htdocs\webginda\resources\views\galeri.blade.php =====
+
+@extends('layouts.app')
+
+@section('title', 'Galeri')
+
+@section('content')
+
+@php
+    $kategoriAktif = request('kategori');
+
+    // Data contoh. 'rasio' = lebar / tinggi foto (perkiraan), dipakai untuk menyusun baris.
+    // Sesuaikan kategori & keterangan dengan foto aslinya, atau ganti dengan data database.
+    $foto = collect([
+        ['file' => 'galeri-1.jpg', 'kategori' => 'Event',           'alt' => 'Pertunjukan tari tradisional',  'rasio' => 1.65],
+        ['file' => 'galeri-2.jpg', 'kategori' => 'Akademik',        'alt' => 'Upacara bendera',               'rasio' => 1.75],
+        ['file' => 'galeri-3.jpg', 'kategori' => 'Event',           'alt' => 'Kegiatan di aula olahraga',     'rasio' => 1.75],
+        ['file' => 'galeri-4.jpg', 'kategori' => 'Event',           'alt' => 'Kegiatan kurban',               'rasio' => 1.55],
+        ['file' => 'galeri-5.jpg', 'kategori' => 'Ekstrakurikuler', 'alt' => 'Barisan siswa berseragam hitam','rasio' => 1.30],
+        ['file' => 'galeri-6.jpg', 'kategori' => 'Ekstrakurikuler', 'alt' => 'Siswa bersama petugas',        'rasio' => 1.05],
+        ['file' => 'galeri-7.jpg', 'kategori' => 'Akademik',        'alt' => 'Siswa berdoa bersama',          'rasio' => 1.25],
+    ])->map(fn ($f) => (object) $f)
+      ->when($kategoriAktif, fn ($c) => $c->where('kategori', $kategoriAktif));
+@endphp
+
+<section class="galeri-hero">
+    <h1 class="sr-only">Galeri Kegiatan SMKN 4 Kota Bogor</h1>
+    <p>Mendokumentasikan momen-momen berharga,<br>SMK NEGERI 4 KOTA BOGOR</p>
+</section>
+
+<div class="page-bg">
+    <div class="container galeri-wrap">
+
+        <div class="filter-pills" role="group" aria-label="Filter kategori galeri">
+            <a href="{{ route('galeri') }}" class="{{ !$kategoriAktif ? 'active' : '' }}">Semua</a>
+            @foreach (['Akademik', 'Ekstrakurikuler', 'Event'] as $k)
+                <a href="{{ route('galeri', ['kategori' => $k]) }}" class="{{ $kategoriAktif === $k ? 'active' : '' }}">{{ $k }}</a>
+            @endforeach
+        </div>
+
+        <div class="galeri-grid">
+            @forelse ($foto as $f)
+                <figure class="galeri-item" style="--r: {{ $f->rasio }}">
+                    <img src="{{ asset('images/' . $f->file) }}" alt="{{ $f->alt }}" loading="lazy">
+                </figure>
+            @empty
+                <p class="artikel-kosong">Belum ada foto di kategori ini.</p>
+            @endforelse
+        </div>
+
+    </div>
+</div>
+
+@endsection
+
+===== C:\xamppp\htdocs\webginda\resources\views\kontak.blade.php =====
+
+@extends('layouts.app')
+
+@section('title', 'Kontak')
+
+@section('content')
+
+<section class="page-hero left below sm">
+    <div class="container">
+        <h1>Kontak</h1>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ route('home') }}">Home</a>
+            <i class="fa-solid fa-angle-right"></i>
+            <span>Kontak</span>
+        </nav>
+    </div>
+</section>
+
+<div class="page-bg">
+    <div class="container kontak-wrap">
+
+        {{-- PETA --}}
+        <div class="peta">
+            <iframe
+                src="https://www.google.com/maps?q=SMK+Negeri+4+Bogor&output=embed"
+                title="Lokasi SMK Negeri 4 Bogor" loading="lazy" allowfullscreen
+                referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
+
+        {{-- INFO + FORM --}}
+        <div class="kontak-grid">
+            <div class="kontak-info">
+                <h2>Hubungi Kami</h2>
+                <p>Kami selalu siap membantu dan mendengarkan aspirasi Anda. Silakan hubungi kami melalui kanal informasi di bawah ini atau kunjungi sekolah kami secara langsung.</p>
+
+                <div class="info-item">
+                    <div class="info-icon"><i class="fa-solid fa-location-dot"></i></div>
+                    <div><h3>Alamat</h3><p>Jl. Raya Tajur Kp. Buntar, Muarasari, Bogor Selatan, Kota Bogor</p></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon"><i class="fa-solid fa-phone"></i></div>
+                    <div><h3>Telepon</h3><p>+62 821 226 2442</p></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon"><i class="fa-regular fa-envelope"></i></div>
+                    <div><h3>Email</h3><p>info@smkn4bogor.sch.id</p></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon"><i class="fa-regular fa-clock"></i></div>
+                    <div>
+                        <h3>Jam Operasional</h3>
+                        <p>Senin - Jumat: 07.00 - 16.00 WIB<br>Sabtu: 07.00 - 13.00 WIB<br>Minggu: Tutup</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-card" id="kirim-pesan">
+                <h2>Kirim Pesan</h2>
+
+                @if (session('sukses'))
+                    <div class="alert-sukses" role="status">{{ session('sukses') }}</div>
+                @endif
+
+                <form method="POST" action="{{ route('kontak.kirim') }}" novalidate>
+                    @csrf
+                    <div class="field">
+                        <label for="nama">Nama Lengkap</label>
+                        <input type="text" id="nama" name="nama" value="{{ old('nama') }}" placeholder="Masukkan nama lengkap Anda" required>
+                        @error('nama')<div class="field-error">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="alamat@email.com" required>
+                        @error('email')<div class="field-error">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="pesan">Pesan</label>
+                        <textarea id="pesan" name="pesan" placeholder="Tuliskan pesan Anda di sini..." required>{{ old('pesan') }}</textarea>
+                        @error('pesan')<div class="field-error">{{ $message }}</div>@enderror
+                    </div>
+                    <button type="submit" class="btn-kirim">Kirim Pesan <i class="fa-regular fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        {{-- BANNER --}}
+        <section class="banner-kolab">
+            <img src="{{ asset('images/gedung-sekolah.jpg') }}" alt="Gedung SMK Negeri 4 Bogor">
+            <div class="banner-teks">
+                <h2>Mari Berkolaborasi</h2>
+                <p>Kami menyambut baik setiap kolaborasi dari orang tua, alumni, dan institusi pendidikan untuk memajukan generasi masa depan.</p>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+@endsection
+
+===== C:\xamppp\htdocs\webginda\resources\views\login.blade.php =====
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login Admin - SMKN 4 Kota Bogor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+</head>
+<body class="login-page">
+    <div class="login-deco" aria-hidden="true"></div>
+
+    <main class="login-box">
+        <div class="login-logo">
+            <img src="{{ asset('images/logo.png') }}" alt="Logo SMKN 4 Kota Bogor">
+        </div>
+        <h1>Login Admin</h1>
+        <p class="login-sub">SMKN 4 KOTA BOGOR</p>
+
+        <div class="login-card">
+            <form method="POST" action="{{ route('login.proses') }}" class="login-form" novalidate>
+                @csrf
+
+                @if ($errors->any())
+                    <div class="alert-error" role="alert">{{ $errors->first() }}</div>
+                @endif
+
+                <div class="login-field">
+                    <label for="username">Username</label>
+                    <div class="input-icon">
+                        <i class="fa-regular fa-user lead"></i>
+                        <input type="text" id="username" name="username" value="{{ old('username') }}" placeholder="Masukkan username" autocomplete="username" autofocus required>
+                    </div>
+                </div>
+
+                <div class="login-field">
+                    <label for="password">Password</label>
+                    <div class="input-icon">
+                        <i class="fa-solid fa-lock lead"></i>
+                        <input type="password" id="password" name="password" placeholder="Masukkan password" autocomplete="current-password" required>
+                        <button type="button" class="toggle-pass" id="togglePass" aria-label="Tampilkan password">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="login-row">
+                    <label class="remember">
+                        <input type="checkbox" name="remember" value="1"> Ingat saya
+                    </label>
+                    <a href="#">Lupa Password?</a>
+                </div>
+
+                <button type="submit" class="btn-login">Login <i class="fa-solid fa-right-to-bracket"></i></button>
+            </form>
+
+            <div class="login-foot">Kembali ke <a href="{{ route('home') }}">Halaman Utama</a></div>
+        </div>
+
+        <p class="login-copy">&copy; {{ date('Y') }} SMKN 4 KOTA BOGOR All rights reserved.</p>
+    </main>
+
+    <script>
+        const pass = document.getElementById('password');
+        const btn = document.getElementById('togglePass');
+        btn.addEventListener('click', () => {
+            const show = pass.type === 'password';
+            pass.type = show ? 'text' : 'password';
+            btn.querySelector('i').className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+            btn.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+        });
+    </script>
+</body>
+</html>
+
+===== C:\xamppp\htdocs\webginda\resources\views\produk.blade.php =====
+
+@extends('layouts.app')
+
+@section('title', 'Produk / Layanan')
+
+@section('content')
+
+<section class="page-hero left below">
+    <div class="container">
+        <h1>Produk / Layanan</h1>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ route('home') }}">Home</a>
+            <i class="fa-solid fa-angle-right"></i>
+            <span>Produk / Layanan</span>
+        </nav>
+    </div>
+</section>
+
+<div class="page-bg">
+    <div class="container produk-wrap">
+
+        <div class="produk-toolbar">
+            <div class="chips" role="group" aria-label="Filter kategori">
+                <a href="{{ route('produk') }}" class="chip {{ !$kategoriAktif ? 'active' : '' }}">Semua</a>
+                @foreach ($kategoriList as $k)
+                    <a href="{{ route('produk', ['kategori' => $k]) }}" class="chip {{ $kategoriAktif === $k ? 'active' : '' }}">{{ $k }}</a>
+                @endforeach
+            </div>
+
+            <form method="GET" action="{{ route('produk') }}" class="search-box produk-search">
+                @if ($kategoriAktif)<input type="hidden" name="kategori" value="{{ $kategoriAktif }}">@endif
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" name="q" value="{{ $cari }}" placeholder="Cari produk / layanan..." aria-label="Cari">
+            </form>
+        </div>
+
+        <div class="produk-grid">
+            @forelse ($daftar as $p)
+                <article class="produk-card">
+                    <div class="produk-img"><img src="{{ $p->gambar_url }}" alt="{{ $p->nama }}"></div>
+                    <div class="produk-body">
+                        <span class="produk-label">{{ $p->kategori }}</span>
+                        <h2>{{ $p->nama }}</h2>
+                        <p>{{ \Illuminate\Support\Str::limit($p->deskripsi, 90) }}</p>
+                        @if ($p->harga)
+                            <div class="produk-harga">Mulai Rp {{ number_format($p->harga, 0, ',', '.') }}</div>
+                        @endif
+                        <a href="{{ route('kontak') }}" class="btn-detail">Hubungi Kami</a>
+                    </div>
+                </article>
+            @empty
+                <p class="artikel-kosong">Produk / layanan tidak ditemukan.</p>
+            @endforelse
+        </div>
+
+    </div>
+</div>
+
+@endsection
+
+===== C:\xamppp\htdocs\webginda\resources\views\profil.blade.php =====
+
+@extends('layouts.app')
+
+@section('title', 'Profil Sekolah')
+
+@section('content')
+
+<section class="page-hero">
+    <h1>Profil Sekolah</h1>
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ route('home') }}">Home</a>
+        <i class="fa-solid fa-angle-right"></i>
+        <span>Profile</span>
+    </nav>
+</section>
+
+<div class="page-bg">
+    <div class="container profile-body">
+
+        {{-- SAMBUTAN KEPALA SEKOLAH --}}
+        <article class="sambutan-card">
+            <img src="{{ asset('images/kepala-sekolah.jpg') }}" alt="Drs. Budi Santoso, Kepala Sekolah">
+            <div class="sambutan-text">
+                <h2>Sambutan Kepala Sekolah</h2>
+                <blockquote>"Selamat datang di website resmi SMK Negeri 4 Bogor. Kami berharap website ini dapat menjadi sarana informasi dan komunikasi yang baik antara sekolah, siswa, orang tua, dan masyarakat luas guna mendukung ekosistem pendidikan yang transparan."</blockquote>
+                <div class="nama">Drs. Budi Santoso</div>
+                <div class="jabatan">Kepala Sekolah SMK Negeri 4 Bogor</div>
+            </div>
+        </article>
+
+        {{-- SEJARAH --}}
+        <section class="sejarah">
+            <div>
+                <span class="eyebrow-line">Identity &amp; Heritage</span>
+                <h2>Sejarah Sekolah</h2>
+                <p>SMK Negeri 4 Bogor merupakan lembaga pendidikan kejuruan negeri terakreditasi A yang berfokus pada bidang teknologi informasi, rekayasa, pengelasan, dan otomotif. Berdiri sejak tahun 2008, sekolah ini berkomitmen mencetak lulusan siap kerja yang santun, mandiri, kreatif, dan kompetitif di era digital.</p>
+                <p>Sekolah ini memiliki lingkungan belajar yang luas dan kondusif, didukung oleh fasilitas praktik modern untuk menunjang kompetensi siswa di setiap bidang keahlian. Melalui sinergi erat bersama berbagai Industri dan Dunia Kerja (IDUKA), SMK Negeri 4 Bogor memastikan kurikulum pembelajaran selalu relevan dengan kebutuhan industri masa kini.</p>
+            </div>
+            <div class="sejarah-img">
+                <img src="{{ asset('images/lapangan1.jpeg') }}" alt="Lapangan SMKN 4 Bogor dilihat dari atas">
+            </div>
+        </section>
+
+        {{-- VISI & MISI --}}
+        <section class="visi-misi">
+            <div class="vm-card visi">
+                <div class="vm-icon"><i class="fa-regular fa-eye"></i></div>
+                <h3>Visi</h3>
+                <p>“Terwujudnya sekolah yang tangguh dalam imtaq, terampil, mandiri, berbasis Teknologi Informasi dan Komunikasi, dan berwawasan lingkungan”</p>
+            </div>
+            <div class="vm-card misi">
+                <div class="vm-icon"><i class="fa-regular fa-clipboard"></i></div>
+                <h3>Misi</h3>
+                <p>pengembangan karakter berbasis imtaq, peningkatan keterampilan kompetensi, kemandirian usaha, optimalisasi TIK dalam pembelajaran, serta perwujudan sekolah berwawasan lingkungan.</p>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+@endsection
+
+===== C:\xamppp\htdocs\webginda\resources\views\welcome.blade.php =====
+
+@extends('layouts.app')
+
+@section('title', 'Home')
+
+@section('content')
+
+<section class="hero-section">
+    <div class="hero-bg">
+        <img src="{{ asset('images/hero.jpg') }}" alt="{{ $profil->nama_perusahaan }}"
+             onerror="this.onerror=null;this.src='{{ asset('images/placeholder.svg') }}'">
+    </div>
+    <div class="hero-overlay">
+        <span class="eyebrow">SOLUSI TEKNOLOGI TERPERCAYA</span>
+        <h1>{{ strtoupper($profil->nama_perusahaan) }}</h1>
+        <p>{{ \Illuminate\Support\Str::limit($profil->tentang, 160) }}</p>
+        <a href="{{ route('produk') }}" class="btn-hero">Lihat Layanan <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+</section>
+
+<div class="stats-wrapper">
+    <div class="stats-container">
+        <div class="stat-card">
+            <i class="fa-solid fa-network-wired stat-icon"></i>
+            <div class="stat-number">{{ $jmlProduk }}</div>
+            <div class="stat-label">PRODUK / LAYANAN</div>
+        </div>
+        <div class="stat-card">
+            <i class="fa-regular fa-newspaper stat-icon"></i>
+            <div class="stat-number">{{ $jmlArtikel }}</div>
+            <div class="stat-label">ARTIKEL &amp; INFORMASI</div>
+        </div>
+        <div class="stat-card">
+            <i class="fa-regular fa-images stat-icon"></i>
+            <div class="stat-number">{{ $jmlGaleri }}</div>
+            <div class="stat-label">DOKUMENTASI KEGIATAN</div>
+        </div>
+        <div class="stat-card">
+            <i class="fa-solid fa-headset stat-icon"></i>
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">DUKUNGAN TEKNIS</div>
+        </div>
+    </div>
+</div>
+
+{{-- TENTANG --}}
+<section class="section">
+    <div class="container about">
+        <div class="thumb">
+            <img src="{{ asset('images/about.jpg') }}" alt="Tentang {{ $profil->nama_perusahaan }}"
+                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder.svg') }}'">
+        </div>
+        <div>
+            <h2>Tentang Kami</h2>
+            <p>{{ $profil->tentang }}</p>
+            <p>{{ \Illuminate\Support\Str::limit($profil->visi, 180) }}</p>
+            <a href="{{ route('profil') }}" class="link-more">Profil perusahaan <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </div>
+</section>
+
+{{-- LAYANAN --}}
+<section class="section soft">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <h2>Produk / Layanan Kami</h2>
+                <p>Solusi teknologi yang kami siapkan untuk kebutuhan Anda.</p>
+            </div>
+            <a href="{{ route('produk') }}" class="link-more">Semua layanan <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="produk-grid">
+            @forelse ($produks as $p)
+                <article class="produk-card">
+                    <div class="produk-img"><img src="{{ $p->gambar_url }}" alt="{{ $p->nama }}"></div>
+                    <div class="produk-body">
+                        <span class="produk-label">{{ $p->kategori }}</span>
+                        <h2>{{ $p->nama }}</h2>
+                        @if ($p->harga)
+                            <div class="produk-harga">Mulai Rp {{ number_format($p->harga, 0, ',', '.') }}</div>
+                        @endif
+                        <a href="{{ route('kontak') }}" class="btn-detail">Hubungi Kami</a>
+                    </div>
+                </article>
+            @empty
+                <p class="artikel-kosong">Belum ada layanan.</p>
+            @endforelse
+        </div>
+    </div>
+</section>
+
+{{-- ARTIKEL --}}
+<section class="section">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <h2>Informasi Terkini</h2>
+                <p>Kabar, tips, dan pengumuman terbaru dari kami.</p>
+            </div>
+            <a href="{{ route('artikel') }}" class="link-more">Semua artikel <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="grid-3">
+            @forelse ($artikels as $a)
+            <article class="card article">
+                <div class="thumb"><img src="{{ $a->gambar_url }}" alt="{{ $a->judul }}"></div>
+                <div class="article-body">
+                    <div class="meta"><span class="pill">{{ $a->kategori }}</span><span>{{ $a->tanggal->locale('id')->translatedFormat('d F Y') }}</span></div>
+                    <h3>{{ $a->judul }}</h3>
+                    <p>{{ \Illuminate\Support\Str::limit($a->deskripsi, 110) }}</p>
+                    <a href="{{ route('artikel') }}" class="read">Baca Selengkapnya <i class="fa-solid fa-arrow-right"></i></a>
+                </div>
+            </article>
+            @empty
+                <p class="artikel-kosong">Belum ada artikel.</p>
+            @endforelse
+        </div>
+    </div>
+</section>
+
+@endsection

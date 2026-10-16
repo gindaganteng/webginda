@@ -5,73 +5,71 @@
 @section('header_custom')
 <header class="page-head">
     <div>
-        <h1>Galeri</h1>
-        <nav class="crumb" aria-label="Breadcrumb">
-            <span>Admin</span>
-            <span>/</span>
-            <strong>Galeri</strong>
-        </nav>
+        <h1>Galeri Kegiatan</h1>
+        <p>Kelola dokumentasi foto kegiatan perusahaan</p>
     </div>
-    <a href="#" class="btn-tambah"><i class="fa-solid fa-plus"></i> Tambah Galeri</a>
+    <a href="{{ route('admin.galeri.tambah') }}" class="btn-tambah"><i class="fa-solid fa-plus"></i> Tambah Galeri</a>
 </header>
 @endsection
 
 @section('content')
 
-<div class="mini-row">
-    <div class="mini-card">
-        <span class="info-ico biru"><i class="fa-regular fa-images"></i></span>
-        <div><small>Total Foto</small><strong>1,240</strong></div>
-    </div>
-    <div class="mini-card">
-        <span class="info-ico kuning"><i class="fa-solid fa-shapes"></i></span>
-        <div><small>Kategori</small><strong>8</strong></div>
-    </div>
-</div>
+@if (session('sukses'))
+    <div class="alert-sukses" role="status">{{ session('sukses') }}</div>
+@endif
 
-<section class="galeri-panel">
-    <div class="galeri-top">
-        <h2>Daftar Foto Galeri</h2>
-        <form method="GET" action="{{ route('admin.galeri') }}" class="search-pill">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="search" name="q" value="{{ $cari }}" placeholder="Cari galeri..." aria-label="Cari galeri">
-        </form>
+<form method="GET" action="{{ route('admin.galeri') }}" class="filter-bar">
+    <div class="filter-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" name="q" value="{{ $cari }}" placeholder="Cari judul kegiatan..." aria-label="Cari judul kegiatan">
     </div>
+    <div class="filter-right">
+        <button type="submit" class="btn-filter">Cari</button>
+    </div>
+</form>
 
+<div class="tabel-card">
     <div class="tabel-scroll">
-        <table class="tabel-galeri">
+        <table class="tabel">
             <thead>
                 <tr>
-                    <th class="g-no">No</th>
-                    <th>Foto</th>
-                    <th>Judul</th>
+                    <th class="c-no">No</th>
+                    <th>Kegiatan</th>
                     <th>Tanggal</th>
-                    <th class="g-aksi">Aksi</th>
+                    <th class="c-aksi">Aksi</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($galeris as $i => $g)
                     <tr>
-                        <td class="g-no">{{ $galeris->firstItem() + $i }}</td>
-                        <td><img src="{{ asset('images/' . $g->gambar) }}" alt="{{ $g->judul }}" class="thumb-galeri"></td>
-                        <td><a href="#" class="judul-galeri">{{ $g->judul }}</a></td>
-                        <td>{{ \Carbon\Carbon::parse($g->tanggal)->locale('id')->translatedFormat('d F Y') }}</td>
-                        <td class="g-aksi">
-                            <a href="#" class="edit" aria-label="Edit {{ $g->judul }}"><i class="fa-solid fa-pen"></i></a>
-                            <button type="button" class="hapus" aria-label="Hapus {{ $g->judul }}"><i class="fa-regular fa-trash-can"></i></button>
+                        <td>{{ $galeris->firstItem() + $i }}</td>
+                        <td>
+                            <div class="judul-cell">
+                                <img src="{{ $g->gambar_url }}" alt="">
+                                <a href="{{ route('admin.galeri.edit', $g) }}">{{ $g->judul }}</a>
+                            </div>
+                        </td>
+                        <td>{{ $g->tanggal->locale('id')->translatedFormat('d F Y') }}</td>
+                        <td class="aksi">
+                            <a href="{{ route('admin.galeri.edit', $g) }}" class="edit" aria-label="Edit {{ $g->judul }}"><i class="fa-solid fa-pen"></i></a>
+                            <form method="POST" action="{{ route('admin.galeri.hapus', $g) }}" onsubmit="return confirm('Hapus foto ini?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="hapus" aria-label="Hapus {{ $g->judul }}"><i class="fa-regular fa-trash-can"></i></button>
+                            </form>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="kosong">Foto tidak ditemukan.</td></tr>
+                    <tr><td colspan="4" class="kosong">Foto tidak ditemukan.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
     <div class="tabel-foot">
-        <span>Menampilkan {{ $galeris->firstItem() ?? 0 }}-{{ $galeris->lastItem() ?? 0 }} dari {{ $galeris->total() }} data</span>
+        <span>Menampilkan {{ $galeris->firstItem() ?? 0 }}-{{ $galeris->lastItem() ?? 0 }} dari {{ $galeris->total() }} foto</span>
 
-        <nav class="pager boxed" aria-label="Halaman">
+        <nav class="pager" aria-label="Halaman">
             @if ($galeris->onFirstPage())
                 <span class="pg off"><i class="fa-solid fa-angle-left"></i></span>
             @else
@@ -89,17 +87,6 @@
             @endif
         </nav>
     </div>
-</section>
+</div>
 
-@endsection
-
-@section('footer_custom')
-<footer class="admin-foot split">
-    <span>&copy; {{ date('Y') }} SMKN 4 Kota Bogor. Semua Hak Dilindungi.</span>
-    <nav>
-        <a href="#">Help Center</a>
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
-    </nav>
-</footer>
 @endsection

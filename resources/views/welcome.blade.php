@@ -6,85 +6,112 @@
 
 <section class="hero-section">
     <div class="hero-bg">
-        <img src="{{ asset('images/lapsmkn4.jpg') }}" alt="SMK Negeri 4 Bogor">
+        <img src="{{ asset('images/hero.jpg') }}" alt="{{ $profil->nama_perusahaan }}"
+             onerror="this.onerror=null;this.src='{{ asset('images/placeholder.svg') }}'">
     </div>
     <div class="hero-overlay">
-        <span class="eyebrow">UNGGUL DALAM PRESTASI</span>
-        <h1>SMK NEGERI 4 BOGOR</h1>
-        <p>Mewujudkan generasi unggul, berkarakter, dan kompeten di bidang teknologi dan keahlian. Siap kerja, santun, mandiri, dan kreatif.</p>
-        <a href="{{ route('profil') }}" class="btn-hero">Jelajahi Sekolah <i class="fa-solid fa-arrow-right"></i></a>
+        <span class="eyebrow">SOLUSI TEKNOLOGI TERPERCAYA</span>
+        <h1>{{ strtoupper($profil->nama_perusahaan) }}</h1>
+        <p>{{ \Illuminate\Support\Str::limit($profil->tentang, 160) }}</p>
+        <a href="{{ route('produk') }}" class="btn-hero">Lihat Layanan <i class="fa-solid fa-arrow-right"></i></a>
     </div>
 </section>
 
 <div class="stats-wrapper">
     <div class="stats-container">
         <div class="stat-card">
-            <i class="fa-solid fa-users stat-icon"></i>
-            <div class="stat-number">1125</div>
-            <div class="stat-label">SISWA AKTIF</div>
+            <i class="fa-solid fa-network-wired stat-icon"></i>
+            <div class="stat-number">{{ $jmlProduk }}</div>
+            <div class="stat-label">PRODUK / LAYANAN</div>
         </div>
         <div class="stat-card">
-            <i class="fa-solid fa-lightbulb stat-icon"></i>
-            <div class="stat-number">60</div>
-            <div class="stat-label">TENAGA PENDIDIK</div>
+            <i class="fa-regular fa-newspaper stat-icon"></i>
+            <div class="stat-number">{{ $jmlArtikel }}</div>
+            <div class="stat-label">ARTIKEL &amp; INFORMASI</div>
         </div>
         <div class="stat-card">
-            <i class="fa-solid fa-rocket stat-icon"></i>
-            <div class="stat-number">4</div>
-            <div class="stat-label">PROGRAM KEAHLIAN</div>
+            <i class="fa-regular fa-images stat-icon"></i>
+            <div class="stat-number">{{ $jmlGaleri }}</div>
+            <div class="stat-label">DOKUMENTASI KEGIATAN</div>
         </div>
         <div class="stat-card">
-            <i class="fa-solid fa-trophy stat-icon"></i>
-            <div class="stat-number">100%</div>
-            <div class="stat-label">KELULUSAN 2025</div>
+            <i class="fa-solid fa-headset stat-icon"></i>
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">DUKUNGAN TEKNIS</div>
         </div>
     </div>
 </div>
 
-{{-- SAMBUTAN --}}
+{{-- TENTANG --}}
 <section class="section">
     <div class="container about">
-        <div class="thumb"><img src="{{ asset('images/kepala-sekolah.jpg') }}" alt="Kepala Sekolah"></div>
+        <div class="thumb">
+            <img src="{{ asset('images/about.jpg') }}" alt="Tentang {{ $profil->nama_perusahaan }}"
+                 onerror="this.onerror=null;this.src='{{ asset('images/placeholder.svg') }}'">
+        </div>
         <div>
-            <h2>Sambutan Kepala Sekolah</h2>
-            <p>Selamat datang di website resmi SMKN 4 Kota Bogor. Kami berkomitmen menghadirkan pendidikan kejuruan yang berkualitas, dekat dengan dunia usaha, dan menumbuhkan karakter siswa.</p>
-            <p>Melalui website ini, Anda dapat mengikuti kegiatan, prestasi, dan produk hasil karya siswa kami.</p>
-            <a href="{{ route('profil') }}" class="link-more">Baca selengkapnya <i class="fa-solid fa-arrow-right"></i></a>
+            <h2>Tentang Kami</h2>
+            <p>{{ $profil->tentang }}</p>
+            <p>{{ \Illuminate\Support\Str::limit($profil->visi, 180) }}</p>
+            <a href="{{ route('profil') }}" class="link-more">Profil perusahaan <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </div>
+</section>
+
+{{-- LAYANAN --}}
+<section class="section soft">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <h2>Produk / Layanan Kami</h2>
+                <p>Solusi teknologi yang kami siapkan untuk kebutuhan Anda.</p>
+            </div>
+            <a href="{{ route('produk') }}" class="link-more">Semua layanan <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="produk-grid">
+            @forelse ($produks as $p)
+                <article class="produk-card">
+                    <div class="produk-img"><img src="{{ $p->gambar_url }}" alt="{{ $p->nama }}"></div>
+                    <div class="produk-body">
+                        <span class="produk-label">{{ $p->kategori }}</span>
+                        <h2>{{ $p->nama }}</h2>
+                        @if ($p->harga)
+                            <div class="produk-harga">Mulai Rp {{ number_format($p->harga, 0, ',', '.') }}</div>
+                        @endif
+                        <a href="{{ route('kontak') }}" class="btn-detail">Hubungi Kami</a>
+                    </div>
+                </article>
+            @empty
+                <p class="artikel-kosong">Belum ada layanan.</p>
+            @endforelse
         </div>
     </div>
 </section>
 
 {{-- ARTIKEL --}}
-@php
-    // Ganti dengan data dari controller: Artikel::latest()->take(3)->get()
-    $artikels = $artikels ?? collect([
-        ['id'=>1,'kategori'=>'Kegiatan Sekolah','tanggal'=>'2 Juli 2026','judul'=>'Kegiatan MPLS Tahun 2026','ringkas'=>'Masa Pengenalan Lingkungan Sekolah (MPLS) tahun ini berjalan dengan lancar dan penuh semangat.','gambar'=>'artikel-1.jpg'],
-        ['id'=>2,'kategori'=>'Prestasi','tanggal'=>'18 Mei 2025','judul'=>'Siswa Berprestasi di Pramuka','ringkas'=>'Tim sekolah berhasil membawa pulang tiga medali emas sekaligus, membuktikan kualitas siswa.','gambar'=>'artikel-2.jpg'],
-        ['id'=>3,'kategori'=>'Pengumuman','tanggal'=>'10 Mei 2025','judul'=>'Kelulusan Tahun 2025','ringkas'=>'Selamat kepada seluruh siswa kelas 12 SMKN 4 Kota Bogor atas kelulusan 100% tahun ini.','gambar'=>'artikel-3.jpg'],
-    ])->map(fn ($a) => (object) $a);
-@endphp
-
-<section class="section soft">
+<section class="section">
     <div class="container">
         <div class="section-head">
             <div>
-                <h2>Artikel Terbaru</h2>
-                <p>Ikuti perkembangan terbaru, prestasi siswa, dan berbagai kegiatan edukatif.</p>
+                <h2>Informasi Terkini</h2>
+                <p>Kabar, tips, dan pengumuman terbaru dari kami.</p>
             </div>
             <a href="{{ route('artikel') }}" class="link-more">Semua artikel <i class="fa-solid fa-arrow-right"></i></a>
         </div>
         <div class="grid-3">
-            @foreach ($artikels as $a)
+            @forelse ($artikels as $a)
             <article class="card article">
-                <div class="thumb"><img src="{{ asset('images/' . $a->gambar) }}" alt="{{ $a->judul }}"></div>
+                <div class="thumb"><img src="{{ $a->gambar_url }}" alt="{{ $a->judul }}"></div>
                 <div class="article-body">
-                    <div class="meta"><span class="pill">{{ $a->kategori }}</span><span>{{ $a->tanggal }}</span></div>
+                    <div class="meta"><span class="pill">{{ $a->kategori }}</span><span>{{ $a->tanggal->locale('id')->translatedFormat('d F Y') }}</span></div>
                     <h3>{{ $a->judul }}</h3>
-                    <p>{{ $a->ringkas }}</p>
+                    <p>{{ \Illuminate\Support\Str::limit($a->deskripsi, 110) }}</p>
                     <a href="{{ route('artikel') }}" class="read">Baca Selengkapnya <i class="fa-solid fa-arrow-right"></i></a>
                 </div>
             </article>
-            @endforeach
+            @empty
+                <p class="artikel-kosong">Belum ada artikel.</p>
+            @endforelse
         </div>
     </div>
 </section>

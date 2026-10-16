@@ -8,55 +8,10 @@
 
 @php
     $statistik = [
-        [
-            'kelas' => 'kuning',
-            'ikon' => 'fa-solid fa-file-lines',
-            'badge' => '+2 baru',
-            'angka' => 4,
-            'label' => 'Total Artikel',
-        ],
-        [
-            'kelas' => 'biru',
-            'ikon' => 'fa-solid fa-bag-shopping',
-            'badge' => 'Stok aman',
-            'angka' => 2,
-            'label' => 'Produk Sekolah',
-        ],
-        [
-            'kelas' => 'abu',
-            'ikon' => 'fa-regular fa-image',
-            'badge' => '24 Album',
-            'angka' => 7,
-            'label' => 'Foto Galeri',
-        ],
-        [
-            'kelas' => 'gelap',
-            'ikon' => 'fa-solid fa-arrow-trend-up',
-            'badge' => '+12%',
-            'angka' => '1.250',
-            'label' => 'Pengunjung',
-        ],
-    ];
-
-    $aktivitas = [
-        [
-            'warna' => 'navy',
-            'judul' => 'Artikel Baru Dipublikasikan',
-            'isi' => 'Artikel "Kegiatan MPLS Tahun 2024" baru saja tayang.',
-            'waktu' => '2 jam yang lalu',
-        ],
-        [
-            'warna' => 'emas',
-            'judul' => 'Update Produk',
-            'isi' => 'Stok "Aksesoris" telah diperbarui.',
-            'waktu' => '5 jam yang lalu',
-        ],
-        [
-            'warna' => 'navy',
-            'judul' => 'Galeri Foto',
-            'isi' => '5 foto baru ditambahkan ke album "Nebrazka".',
-            'waktu' => 'Kemarin, 14:20',
-        ],
+        ['kelas' => 'kuning', 'ikon' => 'fa-solid fa-file-lines',   'badge' => 'Total', 'angka' => $jmlArtikel, 'label' => 'Artikel / Informasi'],
+        ['kelas' => 'biru',   'ikon' => 'fa-solid fa-bag-shopping', 'badge' => 'Total', 'angka' => $jmlProduk,  'label' => 'Produk / Layanan'],
+        ['kelas' => 'abu',    'ikon' => 'fa-regular fa-image',      'badge' => 'Total', 'angka' => $jmlGaleri,  'label' => 'Foto Galeri'],
+        ['kelas' => 'gelap',  'ikon' => 'fa-regular fa-building',   'badge' => 'Statis', 'angka' => 1,          'label' => 'Profil Perusahaan'],
     ];
 @endphp
 
@@ -78,27 +33,29 @@
     <section class="panel">
         <h2>Aksi Cepat</h2>
         <div class="quick">
-            <a href="#"><i class="fa-regular fa-newspaper"></i> Tambah Artikel</a>
-            <a href="#"><i class="fa-solid fa-bag-shopping"></i> Tambah Produk</a>
-            <a href="#"><i class="fa-regular fa-images"></i> Tambah Foto Galeri</a>
+            <a href="{{ route('admin.artikel.tambah') }}"><i class="fa-regular fa-newspaper"></i> Tambah Artikel</a>
+            <a href="{{ route('admin.produk.tambah') }}"><i class="fa-solid fa-bag-shopping"></i> Tambah Produk / Layanan</a>
+            <a href="{{ route('admin.galeri.tambah') }}"><i class="fa-regular fa-images"></i> Tambah Foto Galeri</a>
+            <a href="{{ route('admin.profil') }}"><i class="fa-regular fa-building"></i> Edit Profil Perusahaan</a>
         </div>
     </section>
 
     <section class="panel aktivitas">
         <h2>Aktivitas Terbaru</h2>
         <ul>
-            @foreach ($aktivitas as $a)
+            @forelse ($aktivitas as $a)
                 <li>
                     <span class="dot {{ $a['warna'] }}"></span>
                     <div>
                         <strong>{{ $a['judul'] }}</strong>
                         <p>{{ $a['isi'] }}</p>
-                        <small>{{ $a['waktu'] }}</small>
+                        <small>{{ $a['waktu']->locale('id')->diffForHumans() }}</small>
                     </div>
                 </li>
-            @endforeach
+            @empty
+                <li><div><p>Belum ada aktivitas.</p></div></li>
+            @endforelse
         </ul>
-        <a href="#" class="btn-outline-full">Lihat Semua Aktivitas</a>
     </section>
 
 </div>
